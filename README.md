@@ -40,4 +40,7 @@ https://github.com/wpbkj/PhotoHide/releases/
 2.  支持弹窗提示
 3.  多文件批量处理
 
-
+### 软件截图
+![1](https://wpbkj.gitee.io/photohide/screen1.png)
+![2](https://wpbkj.gitee.io/photohide/screen2.png)
+![3](https://wpbkj.gitee.io/photohide/screen3.png)
