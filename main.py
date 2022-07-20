@@ -3,7 +3,7 @@
 # Copyright 2018-2022 WPBKJ Network Studio
 # Author WPBKJ(www.wpbkj.com)
 #
-# Version 1.0.2
+# Version 2.0.1
 #
 # This file is main part of WPBKJ PhotoHide.
 #
@@ -20,22 +20,30 @@
 # You should have received a copy of the GNU General Public License
 # along with this program; if not, see <http://www.gnu.org/licenses/>.
 import os
-
 os.environ['KIVY_IMAGE'] = 'pil,sdl2'
+import sys
+import win32timezone # 打包使用，为调起kivy的Popup
 import webbrowser
 from kivy.app import App
 from kivy.uix.boxlayout import BoxLayout
+from kivy.uix.popup import Popup
+from kivy.properties import ObjectProperty
 from kivy.lang import Builder
 from kivy.clock import Clock
 import cv2
 import numpy as np
 
 
+if hasattr(sys, "frozen"):
+    root = str(os.path.abspath(os.path.dirname(sys.executable)))
+else:
+    root = str(sys.path[0])
+root = root.replace('\\' , '\\\\')
+
 def linear_add(pic1, pic2):
     out = pic1 + pic2
     out[out > 255] = 255
     return out
-
 
 def divide(pic1, pic2):
     pic2 = pic2.astype(np.float)
@@ -44,10 +52,8 @@ def divide(pic1, pic2):
     out[out > 255] = 255
     return out
 
-
 def inversion(pic):
     return 255 - pic
-
 
 def rgb2gray(pic):
     pic_shape = pic.shape
@@ -58,15 +64,12 @@ def rgb2gray(pic):
     out[:, :, 2] = temp
     return out.astype(np.uint8)
 
-
 def get_red_channel(pic):
     return pic[:, :, 2]
-
 
 def add_alpha(pic, A):
     pic[:, :, 3] = A
     return pic
-
 
 def change_color_level(pic, is_light):
     light_table = [120, 120, 121, 121, 122, 122, 123, 123, 124, 124, 125, 125, 126, 126, 127, 127, 128, 128,
@@ -112,10 +115,9 @@ def change_color_level(pic, is_light):
         out[:, :, 3] = pic[:, :, 3]
     return out
 
-
 def make(file1, file2, savePath):
-    surface_pic = cv2.imread(file1)
-    hidden_pic = cv2.imread(file2)
+    surface_pic = cv2.imdecode(np.fromfile(file1,dtype=np.uint8),-1)
+    hidden_pic = cv2.imdecode(np.fromfile(file2,dtype=np.uint8),-1)
     sur_shape = surface_pic.shape
     hid_shape = hidden_pic.shape
     out_shape = (min(sur_shape[1], hid_shape[1]), min(sur_shape[0], hid_shape[0]))
@@ -143,42 +145,19 @@ def MakePhoto(top_image, bottom_image, output_image):
         return '构建错误,请重试'
 
 
+class MyFileChooser(BoxLayout):
+    load = ObjectProperty(None)
+    cancel = ObjectProperty(None)
+
+
 class PhotoHideWidget(BoxLayout):
+    global root
     top_image = ''
     bottom_image = ''
     output_image = ''
     output_msg = '输入后单击提交开始构建'
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
-        Clock.schedule_interval(self.UpdateAlertMsg, 0)
-    def BeginMake(self):
-        self.top_image = self.ids.top_image.text
-        self.bottom_image = self.ids.bottom_image.text
-        self.output_image = self.ids.output_image.text
-        self.output_msg = MakePhoto(self.top_image, self.bottom_image, self.output_image)
-        # print(self.top_image+self.bottom_image+self.output_image)
-
-    def changeState(self):
-        self.output_msg = '正在构建,请稍候'
-
-    def UpdateAlertMsg(self, *args):
-        self.ids.alert_msg.text = self.output_msg
-
-    def ResetInput(self):
-        self.ids.top_image.text = ''
-        self.ids.bottom_image.text = ''
-        self.ids.output_image.text = 'output.png'
-        self.output_msg = '输入后单击提交开始构建'
-
-    @staticmethod
-    def openGitee():
-        webbrowser.open_new_tab("https://gitee.com/wpbkj/PhotoHide/")
-
-    @staticmethod
-    def openGitHub():
-        webbrowser.open_new_tab("https://github.com/wpbkj/PhotoHide/")
-
-    Builder.load_string('''
+    loadfile = ObjectProperty(None)
+    kv_design = '''
 <DefaultTextInput@TextInput>:
     background_color: 2, 2, 2, 1
     size_hint: (.7, .35)
@@ -190,6 +169,34 @@ class PhotoHideWidget(BoxLayout):
     color: (0, 0, 0, 1)
     size_hint: (.3, 1)
     font_name: 'data/fonts/Leefont.ttf'
+<MyFileChooser>:
+	BoxLayout:
+		size: root.size
+		pos: root.pos
+		orientation: 'vertical'
+		FileChooserListView:
+			id: filechooser
+            path: "'''+root+'''"
+		BoxLayout:
+			size_hint_y: None
+			height: 30
+			Button:
+				text: '选择为上层'
+				on_release: root.load(filechooser.path, filechooser.selection, 'top')
+                background_color: (0, 0, 0, 0)
+                font_name: 'data/fonts/Leefont.ttf'
+
+			Button:
+				text: '选择为下层'
+				on_release: root.load(filechooser.path, filechooser.selection, 'bottom')
+                background_color: (0, 0, 0, 0)
+                font_name: 'data/fonts/Leefont.ttf'
+
+            Button:
+				text: '取消'
+				on_release: root.cancel()
+                background_color: (0, 0, 0, 0)
+                font_name: 'data/fonts/Leefont.ttf'
 <PhotoHideWidget>:
     padding: (10, 10, 10, 10)
     orientation: 'vertical'
@@ -202,7 +209,7 @@ class PhotoHideWidget(BoxLayout):
             pos: self.pos
     BoxLayout:
         orientation: 'vertical'
-        size_hint: (1, .15)
+        size_hint: (1, .2)
         canvas:
             Color:
                 rgba: (0,0,255,0.5)
@@ -210,7 +217,7 @@ class PhotoHideWidget(BoxLayout):
                 size: self.size
                 pos: self.pos
         Label:
-            text: '[size=30]WPBKJ图片隐藏工具(QQ缩略图与大图不同)[/size]\\n[size=15]图片文件应与本程序在同一目录下,输出图片也在同一目录,请手动输入图片名称\\n构建出的图片大于1MB时,请不要使用图片形式发送,否则会被QQ压缩,可使用文件形式发送[/size]'
+            text: '[size=30]WPBKJ图片隐藏工具(QQ缩略图与大图不同)[/size]\\n[size=15]图片文件与本程序在同一目录下可直接输入图片名称,其他图片可点击下方选择图片进行选择,输出图片目录与本程序在同一目录\\n构建出的图片大于1MB时,请不要使用图片形式发送,否则会被QQ压缩,可使用文件形式发送[/size]'
             markup: True
             halign: 'center'
             font_name: 'data/fonts/Leefont.ttf'
@@ -220,6 +227,13 @@ class PhotoHideWidget(BoxLayout):
             text: '输入后单击提交开始构建'
             font_size: 18
             halign: 'center'
+            font_name: 'data/fonts/Leefont.ttf'
+        Button:
+            text: '选择图片'
+            on_release: root.show_load()
+            background_color: (0,0,0,0)
+            color: (0, 0, 0, 1)
+            size_hint: 1, .5
             font_name: 'data/fonts/Leefont.ttf'
     BoxLayout:
         size_hint: (1, .1)
@@ -270,12 +284,61 @@ class PhotoHideWidget(BoxLayout):
             background_color: 0, 0, 0, 0
             color: (0, 0, 0, 1)
             font_name: 'data/fonts/Leefont.ttf'
-''')
+'''
+
+    def __init__(self, **kwargs):
+        super().__init__(**kwargs)
+        Clock.schedule_interval(self.UpdateAlertMsg, 0)
+        self._popup = None
+
+    def show_load(self):
+        content = MyFileChooser(load=self.load, cancel=self.dismiss_popup)
+        self._popup = Popup(title="选择文件(默认打开为程序所在文件夹，仅支持同一盘符文件选择)", content=content, size_hint=(0.9, 0.9), background_color=(0, 0, 0, 0))
+        self._popup.open()
+
+    def load(self, path, filename, location):
+        print(path, filename)
+        if location == 'top':
+            self.ids.top_image.text = filename[0]
+        elif location == 'bottom':
+            self.ids.bottom_image.text = filename[0]
+        self.dismiss_popup()
+
+    def dismiss_popup(self):
+        self._popup.dismiss()
+
+    def BeginMake(self):
+        self.top_image = self.ids.top_image.text
+        self.bottom_image = self.ids.bottom_image.text
+        self.output_image = self.ids.output_image.text
+        self.output_msg = MakePhoto(self.top_image, self.bottom_image, self.output_image)
+
+    def changeState(self):
+        self.output_msg = '正在构建,请稍候'
+
+    def UpdateAlertMsg(self, *args):
+        self.ids.alert_msg.text = self.output_msg
+
+    def ResetInput(self):
+        self.ids.top_image.text = ''
+        self.ids.bottom_image.text = ''
+        self.ids.output_image.text = 'output.png'
+        self.output_msg = '输入后单击提交开始构建'
+
+    @staticmethod
+    def openGitee():
+        webbrowser.open_new_tab("https://gitee.com/wpbkj/PhotoHide/")
+
+    @staticmethod
+    def openGitHub():
+        webbrowser.open_new_tab("https://github.com/wpbkj/PhotoHide/")
+
+    Builder.load_string(kv_design)
 
 
 class PhotoHideApp(App):
     def build(self):
-        self.title = 'WPBKJ图片隐藏v1.0.2'
+        self.title = 'WPBKJ图片隐藏v2.0.1'
         return PhotoHideWidget()
 
 if __name__ == '__main__':
