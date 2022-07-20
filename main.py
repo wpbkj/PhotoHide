@@ -144,7 +144,6 @@ def MakePhoto(top_image, bottom_image, output_image):
 
 
 class PhotoHideWidget(BoxLayout):
-    global root
     top_image = ''
     bottom_image = ''
     output_image = ''
