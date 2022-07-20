@@ -15,9 +15,9 @@
 > Kivy 2.1.0  
 > opencv-python 4.5.3.56  
 > numpy 1.22.2  
-> win32timezone
-> 中文字体：
-> 前景：LeeFont蒙黑体(Leefont.ttf)
+> win32timezone  
+> 中文字体：  
+> 前景：LeeFont蒙黑体(Leefont.ttf)  
 > 图片选择：MiSans(MiSans-Normal.ttf)
 
 ### 使用说明
