@@ -3,7 +3,7 @@
 # Copyright 2018-2022 WPBKJ Network Studio
 # Author WPBKJ(www.wpbkj.com)
 #
-# Version 1.0.1
+# Version 1.0.2
 #
 # This file is main part of WPBKJ PhotoHide.
 #
@@ -135,10 +135,10 @@ def make(file1, file2, savePath):
     out_pic = add_alpha(out_pic, A)
     cv2.imwrite(savePath, out_pic)
 
-def MakePhoto(top_image, bottom_image, output_image, output_imageName):
+def MakePhoto(top_image, bottom_image, output_image):
     try:
         make(top_image, bottom_image, output_image)
-        return '构建成功,保存在'+str(output_imageName)
+        return '构建成功,保存在'+str(output_image)
     except:
         return '构建错误,请重试'
 
@@ -156,7 +156,7 @@ class PhotoHideWidget(BoxLayout):
         self.top_image = self.ids.top_image.text
         self.bottom_image = self.ids.bottom_image.text
         self.output_image = self.ids.output_image.text
-        self.output_msg = MakePhoto(self.top_image, self.bottom_image, self.output_image, self.ids.output_image.text)
+        self.output_msg = MakePhoto(self.top_image, self.bottom_image, self.output_image)
         # print(self.top_image+self.bottom_image+self.output_image)
 
     def changeState(self):
